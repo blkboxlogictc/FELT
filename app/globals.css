@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0f1117;
+  --foreground: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: #0f1117;
+  color: #e2e8f0;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  min-height: 100dvh;
+  overscroll-behavior: none;
+}
+
+/* Refined scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a3347;
+  border-radius: 2px;
+}
+
+::selection {
+  background: #2d6a4f;
+  color: #fff;
+}
+
+/* Input reset for dark theme */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid #2d6a4f;
+  outline-offset: 2px;
+}
+
+@layer utilities {
+  .felt-gradient {
+    background: linear-gradient(135deg, #0f1117 0%, #161b27 100%);
+  }
+
+  .text-gradient-gold {
+    background: linear-gradient(135deg, #c9a84c, #d9bc6a);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .card-surface {
+    background: #161b27;
+    border: 1px solid #2a3347;
+    border-radius: 12px;
+  }
+
+  .suit-watermark {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .suit-watermark::before {
+    content: '♠ ♥ ♦ ♣';
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 6rem;
+    letter-spacing: 1.5rem;
+    color: rgba(255, 255, 255, 0.015);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}

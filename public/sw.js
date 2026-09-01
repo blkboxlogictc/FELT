@@ -1,0 +1,40 @@
+// Felt service worker — exists to satisfy PWA installability and to speed
+// up repeat loads of immutable static assets. Deliberately does NOT cache
+// HTML pages, Server Actions, or Supabase calls: this app is a live-data
+// app behind auth, and caching a dynamic response would risk serving a
+// stale or wrong-user page. Static, content-hashed assets are the only
+// safe thing to cache-first.
+const CACHE_NAME = 'felt-static-v1'
+const STATIC_PATTERNS = [/^\/_next\/static\//, /^\/brand\//, /^\/icon\.png$/, /^\/apple-icon\.png$/]
+
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim())
+  )
+})
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event
+  if (request.method !== 'GET') return
+
+  const url = new URL(request.url)
+  if (url.origin !== self.location.origin) return
+  if (!STATIC_PATTERNS.some((pattern) => pattern.test(url.pathname))) return
+
+  event.respondWith(
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cached = await cache.match(request)
+      if (cached) return cached
+      const response = await fetch(request)
+      if (response.ok) cache.put(request, response.clone())
+      return response
+    })
+  )
+})
