@@ -8,10 +8,12 @@ A mobile-first poker cash game tracker built with Next.js 14, Tailwind CSS, and 
 
 - **Accounts** — anyone signs up for their own account
 - **Groups** — create a private group or join one via invite code; any member can schedule a game
+- **Personal games** — track a solo session (a casino night, a game with people not on Felt) with no group at all
 - **Self-reported buy-ins** — each player enters their own buy-ins, rebuys, and cashout
 - **Peer flagging** — any other player at the table can flag an entry as inaccurate (informational — never blocks settlement)
 - **Settlement Engine** — peer-to-peer debt minimization
-- **Lifetime stats** — rolled up across every group and game a player has been in
+- **Lifetime stats** — rolled up across every group, and every personal game, a player has been in
+- **Installable PWA** — installs to a phone's home screen and runs full-screen like a native app
 
 ---
 
@@ -68,21 +70,40 @@ At a glance: `profiles` (auto-created on signup), `groups` + `group_members`, `g
 
 ---
 
+## Progressive Web App
+
+Felt is installable on a phone's home screen and runs full-screen like a native app:
+
+- `public/manifest.json` — name, icons, `display: "standalone"`, theme color
+- `public/sw.js` — a minimal service worker. It only cache-firsts immutable static assets (`/_next/static/*`, `/brand/*`, the icon files) — it deliberately does **not** cache pages, server actions, or Supabase calls, since this is a live-data app behind auth and caching a dynamic response could serve stale or wrong-user content. Its only job is to make the app installable and speed up repeat static-asset loads.
+- `components/pwa/ServiceWorkerRegister.tsx` — registers the service worker, mounted once in `app/layout.tsx`
+- `components/pwa/InstallPrompt.tsx` — shown on the landing page for signed-out visitors. On Android/desktop Chrome it captures the browser's native `beforeinstallprompt` event and offers a one-tap "Install" button; iOS Safari has no such API, so it shows "Tap Share → Add to Home Screen" instead. Hidden entirely once the app is already running standalone, and dismissible (remembered via `localStorage`).
+
+Nothing here needs configuration — it works as soon as the app is deployed over HTTPS (required for service workers; Netlify serves HTTPS by default).
+
+---
+
 ## Netlify Deployment
+
+Felt needs no separate backend to write — every mutation is a Next.js Server Action, and `@netlify/plugin-nextjs` (already configured in `netlify.toml`) automatically wraps each one into its own Netlify Function at deploy time. Supabase is the only other backend piece, and it's accessed directly from those functions via the anon key + RLS.
 
 ### 1. Push to GitHub
 
+If you haven't already, create an empty repository on [github.com](https://github.com/new) (don't initialize it with a README), then:
+
 ```bash
-git add -A
-git commit -m "Initial commit"
-git push origin main
+git remote add origin https://github.com/<you>/<repo>.git
+git branch -M main
+git push -u origin main
 ```
+
+(A local commit already exists if this repo was set up with Claude Code's help — check `git log` before running `git init`/`git commit` again.)
 
 ### 2. Connect to Netlify
 
 1. Go to [netlify.com](https://netlify.com) → Add new site → Import from Git
 2. Select your repository
-3. Build settings are already configured in `netlify.toml`
+3. Build settings are already configured in `netlify.toml` — Netlify should auto-detect Next.js and offer to install `@netlify/plugin-nextjs` if it isn't already picked up from the config
 
 ### 3. Add environment variables
 
@@ -92,14 +113,10 @@ In Netlify → Site configuration → Environment variables, add:
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
-NEXT_PUBLIC_SITE_URL    ← set to your Netlify URL
+NEXT_PUBLIC_SITE_URL    ← set to your Netlify URL, e.g. https://felt.netlify.app
 ```
 
-### 4. Install the Netlify Next.js plugin
-
-The `netlify.toml` already includes `@netlify/plugin-nextjs`. It will be installed automatically during the first deploy.
-
-### 5. Configure Supabase Auth redirect URLs
+### 4. Configure Supabase Auth redirect URLs
 
 In Supabase → Authentication → URL Configuration:
 
@@ -107,6 +124,10 @@ In Supabase → Authentication → URL Configuration:
 - **Redirect URLs**: add `https://felt.netlify.app/**`
 
 This is needed for signup email confirmation to redirect correctly.
+
+### 5. Redeploy after any env var change
+
+Netlify only reads environment variables at build time — trigger a new deploy after adding or changing one.
 
 ---
 
@@ -123,17 +144,21 @@ This is needed for signup email confirmation to redirect correctly.
     /[id]             — Roster, invite-code share, group's game history
     /[id]/games/new   — Schedule a game for that group
   /games
+    /new              — Schedule a game — pick a group, or "Just me" for a personal/solo game
     /[id]             — Live game — every participant's buy-ins/cashout, self-only edit + peer flagging
     /[id]/settlement  — Settlement summary once the game is closed
-  /profile            — Lifetime stats across all groups + account settings
+  /profile            — Lifetime stats across all groups + personal games + account settings
   /history            — Games across all of your groups
 
 /components
   /ui                 — Button, Modal, Card, Badge primitives
-  /game               — ParticipantCard, BuyInModal, CashOutModal, FlagEntryModal, SettlementSummary, CloseGameButton
+  /game               — ParticipantCard, BuyInModal, CashOutModal, FlagEntryModal, SettlementSummary, CloseGameButton, NewGameForm
   /groups             — GroupCard, CreateGroupForm, JoinGroupForm, GroupMembersList, InviteCodeShare
   /layout             — Navbar with mobile bottom tab bar
   /dashboard          — Dashboard (home)
+  /landing            — LandingPage (signed-out marketing page)
+  /pwa                — ServiceWorkerRegister, InstallPrompt
+  /profile            — DisplayNameSection (view + edit-modal)
 
 /lib
   /supabase           — client.ts (browser), server.ts (SSR), admin.ts (service role, unused escape hatch)
