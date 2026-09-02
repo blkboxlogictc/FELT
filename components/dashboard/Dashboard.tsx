@@ -11,6 +11,7 @@ interface UpcomingGame {
   id: string
   name: string
   date: string
+  gameType: 'cash' | 'tournament'
   status: 'scheduled' | 'active'
   groupName: string | null // null = personal/solo game
 }
@@ -67,9 +68,14 @@ export function Dashboard({ displayName, groups, upcomingGames, stats }: Dashboa
             {upcomingGames.map((g) => (
               <Link key={g.id} href={`/games/${g.id}`}>
                 <Card hoverable className="px-4 py-3">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="font-medium text-slate-200 truncate">{g.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-slate-200 truncate">{g.name}</p>
+                        <Badge variant={g.gameType === 'tournament' ? 'gold' : 'neutral'} className="shrink-0">
+                          {g.gameType === 'tournament' ? 'Tourney' : 'Cash'}
+                        </Badge>
+                      </div>
                       <p className="text-xs text-slate-500 mt-0.5">
                         {g.groupName ?? 'Solo'} · {formatDateShort(g.date)}
                       </p>

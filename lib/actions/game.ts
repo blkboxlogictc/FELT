@@ -11,6 +11,7 @@ export async function scheduleGame(formData: FormData) {
   const groupId = groupIdRaw && groupIdRaw.trim() !== '' ? groupIdRaw : null
   const name = (formData.get('name') as string).trim()
   const date = formData.get('date') as string
+  const gameType = formData.get('game_type') === 'tournament' ? 'tournament' : 'cash'
 
   if (!name || !date) throw new Error('Name and date are required')
 
@@ -28,6 +29,7 @@ export async function scheduleGame(formData: FormData) {
       group_id: groupId,
       name,
       date,
+      game_type: gameType,
       status: 'scheduled',
       settlement_mode: 'peer_to_peer',
       created_by: user.id,

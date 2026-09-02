@@ -45,6 +45,9 @@ export default async function SettlementPage({ params }: Props) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            <Badge variant={game.game_type === 'tournament' ? 'gold' : 'neutral'}>
+              {game.game_type === 'tournament' ? 'Tourney' : 'Cash'}
+            </Badge>
             {!game.group_id && <Badge variant="neutral">Solo</Badge>}
             <Badge variant="closed">Closed</Badge>
           </div>

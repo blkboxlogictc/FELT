@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { PlayerStats } from '../types'
+import type { GameType, PlayerStats } from '../types'
 
 export interface ClosedGameRecord {
-  game: { id: string; name: string; date: string }
+  game: { id: string; name: string; date: string; game_type: GameType }
   totalBuyin: number
   cashout: number
   net: number
@@ -25,7 +25,7 @@ export async function getLifetimeStats(
       ? (
           await supabase
             .from('games')
-            .select('id, name, date, status')
+            .select('id, name, date, game_type, status')
             .in('id', gameIds)
             .eq('status', 'closed')
             .order('date', { ascending: false })

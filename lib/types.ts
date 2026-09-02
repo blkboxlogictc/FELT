@@ -22,11 +22,14 @@ export interface GroupMember {
   profile?: Profile
 }
 
+export type GameType = 'cash' | 'tournament'
+
 export interface Game {
   id: string
   group_id: string | null // null = a personal/solo game not tied to any group
   name: string
   date: string
+  game_type: GameType
   status: 'scheduled' | 'active' | 'closed'
   settlement_mode: 'peer_to_peer' | 'central_bank'
   created_by: string

@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { Navbar } from '@/components/layout/Navbar'
 import { Card } from '@/components/ui/Card'
+import { Badge } from '@/components/ui/Badge'
 import { formatCurrency, formatCurrencySigned } from '@/lib/utils/formatCurrency'
 import { formatDateShort } from '@/lib/utils/formatDate'
 
@@ -14,7 +15,7 @@ export default async function HistoryPage() {
   // personal (group-less) games — no manual group filtering needed.
   const { data: gamesData } = await supabase
     .from('games')
-    .select('id, name, date, group_id')
+    .select('id, name, date, group_id, game_type')
     .eq('status', 'closed')
     .order('date', { ascending: false })
   const games = gamesData ?? []
@@ -118,14 +119,19 @@ export default async function HistoryPage() {
                 return (
                   <Link key={game.id} href={`/games/${game.id}/settlement`}>
                     <Card hoverable className="overflow-hidden">
-                      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border">
+                      <div className="flex items-center justify-between px-4 py-3 border-b border-surface-border gap-3">
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-100 truncate">{game.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-slate-100 truncate">{game.name}</p>
+                            <Badge variant={game.game_type === 'tournament' ? 'gold' : 'neutral'} className="shrink-0">
+                              {game.game_type === 'tournament' ? 'Tourney' : 'Cash'}
+                            </Badge>
+                          </div>
                           <p className="text-xs text-slate-500 mt-0.5">
                             {formatDateShort(game.date)} · {rows.length} players · {formatCurrency(volume)} volume
                           </p>
                         </div>
-                        <span className="text-slate-500 text-sm ml-2">→</span>
+                        <span className="text-slate-500 text-sm ml-2 shrink-0">→</span>
                       </div>
 
                       <div className="divide-y divide-surface-border">

@@ -4,6 +4,7 @@ import { useState, FormEvent } from 'react'
 import { scheduleGame } from '@/lib/actions/game'
 import { Button } from '../ui/Button'
 import { todayISO } from '@/lib/utils/formatDate'
+import type { GameType } from '@/lib/types'
 
 interface Group {
   id: string
@@ -17,6 +18,7 @@ interface NewGameFormProps {
 
 export function NewGameForm({ groups, defaultGroupId = null }: NewGameFormProps) {
   const [groupId, setGroupId] = useState<string | null>(defaultGroupId)
+  const [gameType, setGameType] = useState<GameType>('cash')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,6 +29,7 @@ export function NewGameForm({ groups, defaultGroupId = null }: NewGameFormProps)
     try {
       const formData = new FormData(e.currentTarget)
       formData.set('group_id', groupId ?? '')
+      formData.set('game_type', gameType)
       await scheduleGame(formData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to schedule game')
@@ -61,6 +64,35 @@ export function NewGameForm({ groups, defaultGroupId = null }: NewGameFormProps)
           defaultValue={todayISO()}
           className="w-full bg-surface-card border border-surface-border rounded-xl px-4 py-3 text-slate-100 focus:outline-none focus:border-felt transition-colors [color-scheme:dark]"
         />
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 uppercase tracking-wider mb-2">
+          Game Type
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          {(
+            [
+              { value: 'cash', label: 'Cash Game', description: 'Live buy-ins and cashouts' },
+              { value: 'tournament', label: 'Tournament', description: 'Entry fee(s) and payout' },
+            ] as const
+          ).map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setGameType(option.value)}
+              className={[
+                'text-left px-3 py-3 rounded-xl border transition-colors',
+                gameType === option.value
+                  ? 'bg-felt-subtle border-felt text-slate-100'
+                  : 'bg-surface-card border-surface-border text-slate-400 hover:border-surface-hover',
+              ].join(' ')}
+            >
+              <p className="font-medium text-sm mb-1">{option.label}</p>
+              <p className="text-xs opacity-70 leading-tight">{option.description}</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       <div>

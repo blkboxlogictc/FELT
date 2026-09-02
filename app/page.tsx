@@ -29,7 +29,7 @@ export default async function Home() {
   // (group-less) games — no manual group filtering needed.
   const { data: games } = await supabase
     .from('games')
-    .select('id, name, date, status, group:groups(id, name)')
+    .select('id, name, date, game_type, status, group:groups(id, name)')
     .in('status', ['scheduled', 'active'])
     .order('date', { ascending: true })
 
@@ -37,6 +37,7 @@ export default async function Home() {
     id: g.id as string,
     name: g.name as string,
     date: g.date as string,
+    gameType: g.game_type as 'cash' | 'tournament',
     status: g.status as 'scheduled' | 'active',
     groupName: (g.group as unknown as { name: string } | null)?.name ?? null,
   }))

@@ -33,7 +33,7 @@ export default async function GroupPage({ params }: Props) {
 
   const { data: games } = await supabase
     .from('games')
-    .select('id, name, date, status')
+    .select('id, name, date, game_type, status')
     .eq('group_id', params.id)
     .order('date', { ascending: false })
 
@@ -74,13 +74,19 @@ export default async function GroupPage({ params }: Props) {
                   href={g.status === 'closed' ? `/games/${g.id}/settlement` : `/games/${g.id}`}
                 >
                   <Card hoverable className="px-4 py-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-slate-200">{g.name}</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-slate-200 truncate">{g.name}</p>
+                          <Badge variant={g.game_type === 'tournament' ? 'gold' : 'neutral'} className="shrink-0">
+                            {g.game_type === 'tournament' ? 'Tourney' : 'Cash'}
+                          </Badge>
+                        </div>
                         <p className="text-xs text-slate-500 mt-0.5">{formatDateShort(g.date)}</p>
                       </div>
                       <Badge
                         variant={g.status === 'active' ? 'active' : g.status === 'closed' ? 'closed' : 'default'}
+                        className="shrink-0"
                       >
                         {g.status === 'active' ? '● Live' : g.status === 'closed' ? 'Closed' : 'Scheduled'}
                       </Badge>

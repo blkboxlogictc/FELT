@@ -61,6 +61,8 @@ CREATE TABLE public.games (
   group_id UUID REFERENCES public.groups(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   date DATE NOT NULL,
+  game_type TEXT NOT NULL DEFAULT 'cash'
+    CHECK (game_type IN ('cash', 'tournament')),
   status TEXT NOT NULL DEFAULT 'scheduled'
     CHECK (status IN ('scheduled', 'active', 'closed')),
   settlement_mode TEXT NOT NULL DEFAULT 'peer_to_peer'
@@ -134,6 +136,7 @@ CREATE INDEX idx_group_members_group ON public.group_members(group_id);
 CREATE INDEX idx_group_members_user ON public.group_members(user_id);
 CREATE INDEX idx_games_group ON public.games(group_id);
 CREATE INDEX idx_games_status ON public.games(status);
+CREATE INDEX idx_games_type ON public.games(game_type);
 CREATE INDEX idx_game_participants_game ON public.game_participants(game_id);
 CREATE INDEX idx_game_participants_user ON public.game_participants(user_id);
 CREATE INDEX idx_buy_in_events_game ON public.buy_in_events(game_id);
