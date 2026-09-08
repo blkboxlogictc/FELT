@@ -67,6 +67,8 @@ CREATE TABLE public.games (
     CHECK (status IN ('scheduled', 'active', 'closed')),
   settlement_mode TEXT NOT NULL DEFAULT 'peer_to_peer'
     CHECK (settlement_mode IN ('peer_to_peer', 'central_bank')),
+  dealer_user_id UUID REFERENCES public.profiles(id),
+  dealer_request_user_id UUID REFERENCES public.profiles(id),
   created_by UUID REFERENCES public.profiles(id) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
@@ -84,14 +86,18 @@ CREATE TABLE public.game_participants (
 );
 
 -- =============================================
--- BUY_IN_EVENTS — self-authored buyin/rebuy/cashout log
+-- BUY_IN_EVENTS — self-authored buyin/rebuy/cashout/tip log.
+-- A 'tip' row owned by a game's dealer is their self-reported tip total
+-- (single canonical value, edited via delete-then-insert like a cashout).
+-- A 'tip' row owned by anyone else is an optional, informational "I gave
+-- a tip" log — never summed into anything authoritative.
 -- =============================================
 CREATE TABLE public.buy_in_events (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   game_id UUID REFERENCES public.games(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   type TEXT NOT NULL
-    CHECK (type IN ('buyin', 'rebuy', 'cashout')),
+    CHECK (type IN ('buyin', 'rebuy', 'cashout', 'tip')),
   amount INTEGER NOT NULL,  -- cents
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );

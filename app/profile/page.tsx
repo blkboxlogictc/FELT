@@ -1,6 +1,6 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
-import { getLifetimeStats } from '@/lib/queries/stats'
+import { getLifetimeStats, getTipsEarned } from '@/lib/queries/stats'
 import { getOrCreateProfile } from '@/lib/queries/profile'
 import { Navbar } from '@/components/layout/Navbar'
 import { DisplayNameSection } from '@/components/profile/DisplayNameSection'
@@ -12,6 +12,7 @@ export default async function ProfilePage() {
 
   const profile = await getOrCreateProfile(supabase, user)
   const { records } = await getLifetimeStats(supabase, user.id)
+  const tipRecords = await getTipsEarned(supabase, user.id)
 
   return (
     <div className="min-h-dvh bg-surface-base pb-24">
@@ -28,7 +29,7 @@ export default async function ProfilePage() {
           <h2 className="text-xs uppercase tracking-wider text-slate-400 mb-2">
             Lifetime Stats — All Groups
           </h2>
-          <GameHistoryStats records={records} />
+          <GameHistoryStats records={records} tipRecords={tipRecords} />
         </section>
       </main>
     </div>

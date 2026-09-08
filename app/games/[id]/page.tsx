@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getGameParticipants } from '@/lib/queries/game'
 import { joinGame } from '@/lib/actions/game'
 import { ParticipantCard } from '@/components/game/ParticipantCard'
+import { DealerSection } from '@/components/game/DealerSection'
 import { CloseGameButton } from '@/components/game/CloseGameButton'
 import { RefreshButton } from '@/components/game/RefreshButton'
 import { Badge } from '@/components/ui/Badge'
@@ -32,19 +33,48 @@ export default async function GamePage({ params }: Props) {
     .from('buy_in_events')
     .select('*')
     .eq('game_id', params.id)
-    .in('type', ['buyin', 'rebuy'])
+    .in('type', ['buyin', 'rebuy', 'tip'])
     .order('created_at')
 
   const { data: flags } = await supabase.from('entry_flags').select('*').eq('game_id', params.id)
 
   const profileMap = new Map(participants.map((p) => [p.user_id, p.profile?.display_name ?? 'Unknown']))
 
+  let isManager = false
+  if (!game.group_id) {
+    isManager = game.created_by === user.id
+  } else {
+    const { data: membership } = await supabase
+      .from('group_members')
+      .select('role')
+      .eq('group_id', game.group_id)
+      .eq('user_id', user.id)
+      .maybeSingle()
+    isManager = membership?.role === 'owner'
+  }
+
+  // The dealer's own reported tip total is pulled out into its own summary —
+  // everything else (buyin/rebuy, and anyone else's optional "tip given" log)
+  // renders in the normal per-participant entries list.
+  let dealerTipsReceived: number | null = null
+  let dealerTipsEntryId: string | null = null
+
   const eventsByUser = new Map<string, BuyInEvent[]>()
   ;(events ?? []).forEach((e) => {
+    if (e.type === 'tip' && game.dealer_user_id && e.user_id === game.dealer_user_id) {
+      dealerTipsReceived = e.amount
+      dealerTipsEntryId = e.id
+      return
+    }
     const list = eventsByUser.get(e.user_id) ?? []
     list.push(e as BuyInEvent)
     eventsByUser.set(e.user_id, list)
   })
+
+  const dealerName = game.dealer_user_id ? profileMap.get(game.dealer_user_id) ?? 'Unknown' : null
+  const pendingRequestName = game.dealer_request_user_id
+    ? profileMap.get(game.dealer_request_user_id) ?? 'Unknown'
+    : null
 
   const flagsByEntry: Record<
     string,
@@ -130,6 +160,18 @@ export default async function GamePage({ params }: Props) {
           </form>
         )}
 
+        <DealerSection
+          gameId={params.id}
+          currentUserId={user.id}
+          participants={participants.map((p) => ({ id: p.user_id, name: p.profile?.display_name ?? 'Unknown' }))}
+          dealerId={game.dealer_user_id}
+          dealerName={dealerName}
+          pendingRequestId={game.dealer_request_user_id}
+          pendingRequestName={pendingRequestName}
+          isManager={isManager}
+          canRequestDealer={!!game.group_id && isParticipant && game.dealer_user_id !== user.id}
+        />
+
         <div className="space-y-2">
           {participants.map((p) => (
             <ParticipantCard
@@ -141,6 +183,10 @@ export default async function GamePage({ params }: Props) {
               isSelf={p.user_id === user.id}
               entries={eventsByUser.get(p.user_id) ?? []}
               flagsByEntry={flagsByEntry}
+              isDealer={!!game.dealer_user_id && p.user_id === game.dealer_user_id}
+              tipsReceived={p.user_id === game.dealer_user_id ? dealerTipsReceived : null}
+              tipsReceivedEntryId={p.user_id === game.dealer_user_id ? dealerTipsEntryId : null}
+              dealerName={dealerName}
             />
           ))}
         </div>

@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import { Card } from '../ui/Card'
 import { Badge } from '../ui/Badge'
-import type { ClosedGameRecord } from '@/lib/queries/stats'
+import type { ClosedGameRecord, TipRecord } from '@/lib/queries/stats'
 import { formatCurrency, formatCurrencySigned } from '@/lib/utils/formatCurrency'
 import { formatDateShort } from '@/lib/utils/formatDate'
 
@@ -15,12 +15,22 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'tournament', label: 'Tournaments' },
 ]
 
-export function GameHistoryStats({ records }: { records: ClosedGameRecord[] }) {
+interface GameHistoryStatsProps {
+  records: ClosedGameRecord[]
+  tipRecords: TipRecord[]
+}
+
+export function GameHistoryStats({ records, tipRecords }: GameHistoryStatsProps) {
   const [filter, setFilter] = useState<Filter>('all')
 
   const filtered = useMemo(
     () => (filter === 'all' ? records : records.filter((r) => r.game.game_type === filter)),
     [records, filter]
+  )
+
+  const filteredTips = useMemo(
+    () => (filter === 'all' ? tipRecords : tipRecords.filter((t) => t.game.game_type === filter)),
+    [tipRecords, filter]
   )
 
   const stats = useMemo(
@@ -29,8 +39,9 @@ export function GameHistoryStats({ records }: { records: ClosedGameRecord[] }) {
       lifetimeNet: filtered.reduce((sum, r) => sum + r.net, 0),
       biggestWin: filtered.reduce((max, r) => Math.max(max, r.net), 0),
       biggestLoss: filtered.reduce((min, r) => Math.min(min, r.net), 0),
+      tipsEarned: filteredTips.reduce((sum, t) => sum + t.amount, 0),
     }),
-    [filtered]
+    [filtered, filteredTips]
   )
   const lifetimePositive = stats.lifetimeNet >= 0
 
@@ -83,6 +94,13 @@ export function GameHistoryStats({ records }: { records: ClosedGameRecord[] }) {
             </p>
           </div>
         </div>
+
+        {stats.tipsEarned > 0 && (
+          <div className="mt-4 pt-4 border-t border-surface-border flex items-center justify-between">
+            <p className="text-xs text-slate-500">🎩 Tips earned dealing ({filteredTips.length} game{filteredTips.length !== 1 ? 's' : ''})</p>
+            <p className="text-lg font-bold text-gold">{formatCurrency(stats.tipsEarned)}</p>
+          </div>
+        )}
       </Card>
 
       {filtered.length > 0 ? (

@@ -49,3 +49,33 @@ export async function getLifetimeStats(
 
   return { stats, records }
 }
+
+export interface TipRecord {
+  game: { id: string; name: string; date: string; game_type: GameType }
+  amount: number // cents, the dealer's own self-reported total for that game
+}
+
+/** Tips earned dealing, across every closed game where this user was the dealer. */
+export async function getTipsEarned(supabase: SupabaseClient, userId: string): Promise<TipRecord[]> {
+  const { data: dealtGames } = await supabase
+    .from('games')
+    .select('id, name, date, game_type')
+    .eq('dealer_user_id', userId)
+    .eq('status', 'closed')
+
+  const gameIds = (dealtGames ?? []).map((g) => g.id)
+  if (gameIds.length === 0) return []
+
+  const { data: tips } = await supabase
+    .from('buy_in_events')
+    .select('game_id, amount')
+    .eq('user_id', userId)
+    .eq('type', 'tip')
+    .in('game_id', gameIds)
+
+  const tipsByGame = new Map((tips ?? []).map((t) => [t.game_id, t.amount as number]))
+
+  return (dealtGames ?? [])
+    .filter((g) => tipsByGame.has(g.id))
+    .map((g) => ({ game: g, amount: tipsByGame.get(g.id)! }))
+}

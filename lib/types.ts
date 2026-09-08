@@ -32,6 +32,8 @@ export interface Game {
   game_type: GameType
   status: 'scheduled' | 'active' | 'closed'
   settlement_mode: 'peer_to_peer' | 'central_bank'
+  dealer_user_id: string | null
+  dealer_request_user_id: string | null // pending "request to deal", owner must approve/deny
   created_by: string
   created_at: string
 }
@@ -52,7 +54,7 @@ export interface BuyInEvent {
   id: string
   game_id: string
   user_id: string
-  type: 'buyin' | 'rebuy' | 'cashout'
+  type: 'buyin' | 'rebuy' | 'cashout' | 'tip'
   amount: number // cents
   created_at: string
 }

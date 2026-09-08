@@ -32,7 +32,7 @@ export async function assertGameGroupMember(gameId: string) {
 
   const { data: game } = await supabase
     .from('games')
-    .select('id, group_id, status, created_by')
+    .select('id, group_id, status, created_by, dealer_user_id, dealer_request_user_id')
     .eq('id', gameId)
     .maybeSingle()
 
@@ -42,6 +42,34 @@ export async function assertGameGroupMember(gameId: string) {
     await assertGroupMember(game.group_id)
   } else if (game.created_by !== user.id) {
     throw new Error('Unauthorized: not your game')
+  }
+
+  return { user, game }
+}
+
+/**
+ * Throws unless the current user manages the given game's dealer
+ * assignment: the group's owner, or — for a personal/solo game — its
+ * creator (there's no group owner to defer to).
+ */
+export async function assertCanManageDealer(gameId: string) {
+  const { user, game } = await assertGameGroupMember(gameId)
+
+  if (!game.group_id) {
+    if (game.created_by !== user.id) throw new Error('Unauthorized: not your game')
+    return { user, game }
+  }
+
+  const supabase = createClient()
+  const { data: membership } = await supabase
+    .from('group_members')
+    .select('role')
+    .eq('group_id', game.group_id)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (!membership || membership.role !== 'owner') {
+    throw new Error('Only the group owner can manage the dealer')
   }
 
   return { user, game }

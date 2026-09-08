@@ -5,6 +5,7 @@ import { getGameParticipants } from '@/lib/queries/game'
 import { SettlementSummary } from '@/components/game/SettlementSummary'
 import { Badge } from '@/components/ui/Badge'
 import { buildPlayerResults, calculateSettlement } from '@/lib/settlement'
+import { formatCurrency } from '@/lib/utils/formatCurrency'
 import { formatDate } from '@/lib/utils/formatDate'
 
 interface Props {
@@ -27,6 +28,22 @@ export default async function SettlementPage({ params }: Props) {
     }))
   )
   const settlement = calculateSettlement(playerResults, game.settlement_mode)
+
+  let dealerTipsSummary: { name: string; amount: number } | null = null
+  if (game.dealer_user_id) {
+    const dealer = participants.find((p) => p.user_id === game.dealer_user_id)
+    const { data: tipEvent } = await supabase
+      .from('buy_in_events')
+      .select('amount')
+      .eq('game_id', params.id)
+      .eq('user_id', game.dealer_user_id)
+      .eq('type', 'tip')
+      .maybeSingle()
+
+    if (dealer && tipEvent) {
+      dealerTipsSummary = { name: dealer.profile?.display_name ?? 'Unknown', amount: tipEvent.amount }
+    }
+  }
 
   return (
     <div className="min-h-dvh bg-surface-base pb-8">
@@ -68,6 +85,13 @@ export default async function SettlementPage({ params }: Props) {
           players={playerResults}
           settlement={settlement}
         />
+
+        {dealerTipsSummary && (
+          <p className="text-center text-sm text-slate-500 pt-2">
+            🎩 {dealerTipsSummary.name} dealt and took home{' '}
+            <span className="text-gold font-medium">{formatCurrency(dealerTipsSummary.amount)}</span> in tips
+          </p>
+        )}
       </main>
     </div>
   )

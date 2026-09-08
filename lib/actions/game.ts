@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '../supabase/server'
-import { assertGroupMember, assertGameGroupMember, assertOwnEntry } from '../authz'
+import { assertGroupMember, assertGameGroupMember, assertOwnEntry, assertCanManageDealer } from '../authz'
 import { getGameParticipants } from '../queries/game'
 
 export async function scheduleGame(formData: FormData) {
@@ -217,4 +217,118 @@ export async function closeGame(gameId: string) {
 
   revalidatePath(`/games/${gameId}`)
   redirect(`/games/${gameId}/settlement`)
+}
+
+export async function setDealer(gameId: string, dealerUserId: string | null) {
+  await assertCanManageDealer(gameId)
+  const supabase = createClient()
+
+  if (dealerUserId) {
+    const { data: participant } = await supabase
+      .from('game_participants')
+      .select('id')
+      .eq('game_id', gameId)
+      .eq('user_id', dealerUserId)
+      .maybeSingle()
+
+    if (!participant) throw new Error('That player has not joined this game')
+  }
+
+  const { error } = await supabase
+    .from('games')
+    .update({ dealer_user_id: dealerUserId, dealer_request_user_id: null })
+    .eq('id', gameId)
+
+  if (error) throw new Error('Failed to set dealer')
+  revalidatePath(`/games/${gameId}`)
+}
+
+export async function requestDealer(gameId: string) {
+  const { user, game } = await assertGameGroupMember(gameId)
+  if (!game.group_id) throw new Error('Personal games have no owner to request from')
+
+  const supabase = createClient()
+
+  const { data: participant } = await supabase
+    .from('game_participants')
+    .select('id')
+    .eq('game_id', gameId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+  if (!participant) throw new Error('Join the game before requesting to deal')
+
+  const { error } = await supabase
+    .from('games')
+    .update({ dealer_request_user_id: user.id })
+    .eq('id', gameId)
+
+  if (error) throw new Error('Failed to request to deal')
+  revalidatePath(`/games/${gameId}`)
+}
+
+export async function approveDealerRequest(gameId: string) {
+  const { game } = await assertCanManageDealer(gameId)
+  if (!game.dealer_request_user_id) throw new Error('No pending request')
+
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('games')
+    .update({ dealer_user_id: game.dealer_request_user_id, dealer_request_user_id: null })
+    .eq('id', gameId)
+
+  if (error) throw new Error('Failed to approve request')
+  revalidatePath(`/games/${gameId}`)
+}
+
+export async function denyDealerRequest(gameId: string) {
+  const { game } = await assertCanManageDealer(gameId)
+  if (!game.dealer_request_user_id) throw new Error('No pending request')
+
+  const supabase = createClient()
+  const { error } = await supabase
+    .from('games')
+    .update({ dealer_request_user_id: null })
+    .eq('id', gameId)
+
+  if (error) throw new Error('Failed to deny request')
+  revalidatePath(`/games/${gameId}`)
+}
+
+export async function reportTips(gameId: string, amountCents: number) {
+  if (amountCents < 0) throw new Error('Enter a valid amount')
+  const { user, game } = await assertGameGroupMember(gameId)
+  if (game.dealer_user_id !== user.id) throw new Error('Only the dealer can report tips')
+
+  const supabase = createClient()
+
+  // Single canonical value per game, same delete-then-insert shape as cashOut
+  await supabase.from('buy_in_events').delete().eq('game_id', gameId).eq('user_id', user.id).eq('type', 'tip')
+
+  const { error } = await supabase.from('buy_in_events').insert({
+    game_id: gameId,
+    user_id: user.id,
+    type: 'tip',
+    amount: amountCents,
+  })
+
+  if (error) throw new Error('Failed to report tips')
+  revalidatePath(`/games/${gameId}`)
+}
+
+export async function addTipGiven(gameId: string, amountCents: number) {
+  if (amountCents <= 0) throw new Error('Enter a valid amount')
+  const { user, game } = await assertGameGroupMember(gameId)
+  if (!game.dealer_user_id) throw new Error('No dealer is set for this game yet')
+  if (game.dealer_user_id === user.id) throw new Error('The dealer reports their own tip total instead')
+
+  const supabase = createClient()
+  const { error } = await supabase.from('buy_in_events').insert({
+    game_id: gameId,
+    user_id: user.id,
+    type: 'tip',
+    amount: amountCents,
+  })
+
+  if (error) throw new Error('Failed to log tip')
+  revalidatePath(`/games/${gameId}`)
 }
