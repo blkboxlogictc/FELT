@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '../supabase/server'
 import { assertGroupMember, assertGameGroupMember, assertOwnEntry, assertCanManageDealer } from '../authz'
 import { getGameParticipants } from '../queries/game'
+import { getOrCreateProfile } from '../queries/profile'
 
 export async function scheduleGame(formData: FormData) {
   const groupIdRaw = formData.get('group_id') as string | null
@@ -20,6 +21,7 @@ export async function scheduleGame(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+  await getOrCreateProfile(supabase, user)
 
   if (groupId) await assertGroupMember(groupId)
 

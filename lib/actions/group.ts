@@ -1,10 +1,11 @@
 'use server'
 
-import crypto from 'crypto'
+import crypto from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '../supabase/server'
+import { getOrCreateProfile } from '../queries/profile'
 
 function generateInviteCode(): string {
   return crypto.randomBytes(5).toString('base64url')
@@ -32,6 +33,7 @@ export async function createGroup(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+  await getOrCreateProfile(supabase, user) // creates the row if missing (pre-trigger accounts)
 
   const name = (formData.get('name') as string).trim()
   if (!name) throw new Error('Group name is required')
@@ -53,6 +55,7 @@ export async function joinGroup(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
+  await getOrCreateProfile(supabase, user)
 
   const inviteCode = (formData.get('invite_code') as string).trim()
   if (!inviteCode) throw new Error('Invite code is required')
