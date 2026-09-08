@@ -21,6 +21,7 @@ async function insertGroupWithUniqueCode(supabase: SupabaseClient, name: string,
 
     if (!error) return data
     if (!error.message?.toLowerCase().includes('duplicate')) {
+      console.error('createGroup insert failed:', error)
       throw new Error('Failed to create group')
     }
   }
@@ -44,7 +45,10 @@ export async function createGroup(formData: FormData) {
     .from('group_members')
     .insert({ group_id: group.id, user_id: user.id, role: 'owner' })
 
-  if (memberError) throw new Error('Failed to add you to the group')
+  if (memberError) {
+    console.error('createGroup group_members insert failed:', memberError)
+    throw new Error('Failed to add you to the group')
+  }
 
   redirect(`/groups/${group.id}`)
 }

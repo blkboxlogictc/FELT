@@ -27,11 +27,16 @@ export async function getOrCreateProfile(
     user.email?.split('@')[0] ||
     'there'
 
-  const { data: created } = await supabase
+  const { data: created, error } = await supabase
     .from('profiles')
     .insert({ id: user.id, display_name: fallbackName })
     .select('id, display_name')
     .single()
 
-  return created ?? { id: user.id, display_name: fallbackName }
+  if (error) {
+    console.error('getOrCreateProfile insert failed:', error)
+    throw new Error('Failed to set up your profile — please try again')
+  }
+
+  return created
 }
