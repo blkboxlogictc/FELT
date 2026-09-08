@@ -217,9 +217,12 @@ CREATE POLICY "profiles: insert own" ON public.profiles
 CREATE POLICY "profiles: update own" ON public.profiles
   FOR UPDATE USING (id = auth.uid()) WITH CHECK (id = auth.uid());
 
--- GROUPS: private, group-scoped read; anyone can create one.
-CREATE POLICY "groups: read as member" ON public.groups
-  FOR SELECT USING (is_group_member(id));
+-- GROUPS: private, group-scoped read; anyone can create one. A creator can
+-- also always see their own group even before their group_members row
+-- exists — needed so `.insert().select()` on creation can return the new
+-- row (Postgres requires SELECT-policy visibility for INSERT...RETURNING).
+CREATE POLICY "groups: read as member or creator" ON public.groups
+  FOR SELECT USING (is_group_member(id) OR created_by = auth.uid());
 CREATE POLICY "groups: create" ON public.groups
   FOR INSERT WITH CHECK (created_by = auth.uid());
 CREATE POLICY "groups: update as owner" ON public.groups

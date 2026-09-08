@@ -36,10 +36,6 @@ export async function createGroup(formData: FormData) {
   if (!user) throw new Error('Unauthorized')
   await getOrCreateProfile(supabase, user) // creates the row if missing (pre-trigger accounts)
 
-  // TEMPORARY diagnostic — remove once the RLS failure below is root-caused.
-  const { data: whoami, error: whoamiError } = await supabase.rpc('debug_whoami')
-  console.error('DEBUG createGroup whoami:', whoami, 'error:', whoamiError, 'app user.id:', user.id)
-
   const name = (formData.get('name') as string).trim()
   if (!name) throw new Error('Group name is required')
 
