@@ -1,7 +1,7 @@
 import { getUser } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getLifetimeStats } from '@/lib/queries/stats'
-import { getOrCreateProfile } from '@/lib/queries/profile'
+import { getOrCreateProfileSafe } from '@/lib/queries/profile'
 import { Navbar } from '@/components/layout/Navbar'
 import { Dashboard } from '@/components/dashboard/Dashboard'
 import { LandingPage } from '@/components/landing/LandingPage'
@@ -12,7 +12,7 @@ export default async function Home() {
 
   const supabase = createClient()
 
-  const profile = await getOrCreateProfile(supabase, user)
+  const profile = await getOrCreateProfileSafe(supabase, user)
 
   const { data: groupRows } = await supabase
     .from('groups')

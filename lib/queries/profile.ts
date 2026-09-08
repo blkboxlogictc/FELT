@@ -40,3 +40,26 @@ export async function getOrCreateProfile(
 
   return created
 }
+
+/**
+ * Same as getOrCreateProfile, but never throws — falls back to a locally
+ * derived display name if the profile can't be read or created. Use this
+ * in page renders (which have no error boundary of their own), so a
+ * database hiccup degrades gracefully instead of crashing the whole page;
+ * use the throwing version in mutations, where the caller already has
+ * error handling (a form's try/catch) and silently degrading would just
+ * hide a real problem.
+ */
+export async function getOrCreateProfileSafe(
+  supabase: SupabaseClient,
+  user: User
+): Promise<{ id: string; display_name: string }> {
+  try {
+    return await getOrCreateProfile(supabase, user)
+  } catch (err) {
+    console.error('getOrCreateProfileSafe: falling back after failure', err)
+    const fallbackName =
+      (user.user_metadata?.display_name as string | undefined)?.trim() || user.email?.split('@')[0] || 'there'
+    return { id: user.id, display_name: fallbackName }
+  }
+}

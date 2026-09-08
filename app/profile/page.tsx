@@ -1,7 +1,7 @@
 import { requireAuth } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/server'
 import { getLifetimeStats, getTipsEarned } from '@/lib/queries/stats'
-import { getOrCreateProfile } from '@/lib/queries/profile'
+import { getOrCreateProfileSafe } from '@/lib/queries/profile'
 import { Navbar } from '@/components/layout/Navbar'
 import { DisplayNameSection } from '@/components/profile/DisplayNameSection'
 import { GameHistoryStats } from '@/components/profile/GameHistoryStats'
@@ -10,7 +10,7 @@ export default async function ProfilePage() {
   const user = await requireAuth()
   const supabase = createClient()
 
-  const profile = await getOrCreateProfile(supabase, user)
+  const profile = await getOrCreateProfileSafe(supabase, user)
   const { records } = await getLifetimeStats(supabase, user.id)
   const tipRecords = await getTipsEarned(supabase, user.id)
 

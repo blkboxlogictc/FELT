@@ -284,3 +284,13 @@ CREATE POLICY "entry_flags: flag as fellow participant" ON public.entry_flags
   );
 CREATE POLICY "entry_flags: retract own flag" ON public.entry_flags
   FOR DELETE USING (flagged_by_user_id = auth.uid());
+
+-- =============================================
+-- ROLE GRANTS — required in addition to RLS. Creating tables via raw SQL
+-- (as opposed to the Table Editor UI) does not automatically grant the
+-- standard Supabase role privileges, so every DML statement would fail
+-- with "permission denied" before RLS is ever evaluated without these.
+-- RLS policies above remain the actual fine-grained access control.
+-- =============================================
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
